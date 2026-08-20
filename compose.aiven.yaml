@@ -1,0 +1,25 @@
+# This compose file is for Aiven Runtime
+
+services:
+
+  airflow-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql://mgr_user:mgr_pass@mgr-db:5432/mgr_db
+    depends_on:
+      - airflow-pg-server
+    ports:
+      - "8080:8080"
+
+  # Our Aiven for PostgreSQL service
+  # Aiven Runtime deployment will sort out the actual environment variables for us
+  airflow-pg-server:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: mgr_user
+      POSTGRES_PASSWORD: mgr_pass
+      POSTGRES_DB: mgr_db
+    ports:
+      - "5432:5432"
