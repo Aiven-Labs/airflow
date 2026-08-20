@@ -1,0 +1,30 @@
+# This compose file is for Aiven Runtime
+# Use this compose file the first time Airflow is run against its database
+# so that it can set up an admin user with a known password. After that,
+# use compose.aiven.yaml to deploy with the same user/password.
+
+services:
+
+  airflow-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@airflow-db:5432/${POSTGRES_DB}
+      AIRFLOW_WWW_USER_CREATE: true
+      AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_WWW_USER_PASSWORD}
+    depends_on:
+      - airflow-pg
+    ports:
+      - "8080:8080"
+
+  # Our Aiven for PostgreSQL service
+  # Aiven Runtime deployment will sort out the actual environment variables for us
+  airflow-db:
+    image: postgres:17-alpine
+    environment:
+     POSTGRES_DB: ${POSTGRES_DB}
+     POSTGRES_USER: ${POSTGRES_USER}
+     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
