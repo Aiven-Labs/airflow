@@ -7,16 +7,19 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      # Aiven Runtime deployment sets DATABASE_URL to the PG service
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: ${DATABASE_URL}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@airflow-db:5432/${POSTGRES_DB}
     depends_on:
-      - airflow-pg-server
+      - airflow-pg
     ports:
       - "8080:8080"
 
   # Our Aiven for PostgreSQL service
   # Aiven Runtime deployment will sort out the actual environment variables for us
-  airflow-pg:
+  airflow-db:
     image: postgres:17-alpine
+    environment:
+     POSTGRES_DB: ${POSTGRES_DB}
+     POSTGRES_USER: ${POSTGRES_USER}
+     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
