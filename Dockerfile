@@ -1,7 +1,8 @@
 # Apache Airflow on Aiven App Runtime
 # Extends the official Airflow image for stateless deployment with PostgreSQL
 
-ARG AIRFLOW_IMAGE=apache/airflow:3.1.8
+#ARG AIRFLOW_IMAGE=apache/airflow:3.1.8
+ARG AIRFLOW_IMAGE=apache/airflow:3.0.5
 FROM ${AIRFLOW_IMAGE}
 
 # Airflow configuration for stateless App Runtime
