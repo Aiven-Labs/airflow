@@ -238,4 +238,5 @@ RUN pip install --no-cache-dir -r /requirements.txt
 
 ## License
 
-This deployment configuration is provided as-is. Apache Airflow is licensed under the Apache License 2.0.
+This deployment configuration is provided as-is under an MIT license.
+Apache Airflow is licensed under the Apache License 2.0.
