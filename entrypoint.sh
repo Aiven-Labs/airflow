@@ -14,7 +14,7 @@ set -e
 #     Simple auth manager | Password for user 'admin': 5vdQkTqhCsY7e3yY
 #
 # Let's define where the password file should be
-PASSWORDS_FILE=/opt/airflow/passwords.json"
+PASSWORDS_FILE="/opt/airflow/passwords.json"
 export AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE="$PASSWORDS_FILE"
 
 # --- Environment Variable Check ---
