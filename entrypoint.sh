@@ -8,8 +8,9 @@ set -e
 _PIP_ADDITIONAL_REQUIREMENTS="apache-airflow-fab-auth-manager"
 AIRFLOW__CORE__AUTH_MANAGER="airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager"
 
-# Maybe this will work
-pip install apache-airflow-fab-auth-manager
+# Install the apache-airflow-fab-auth-manager "by hand"
+# See https://flask-appbuilder.readthedocs.io/en/latest/installation.html
+pip install flask-appbuilder
 
 # --- Environment Variable Check ---
 # Support both AIRFLOW__DATABASE__SQL_ALCHEMY_CONN and DATABASE_URL (Aiven service integration)
