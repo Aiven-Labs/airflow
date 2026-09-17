@@ -234,7 +234,7 @@ RUN pip install --no-cache-dir -r /requirements.txt
 
 - [Apache Airflow Documentation](https://airflow.apache.org/docs/)
 - [Airflow Docker Image](https://airflow.apache.org/docs/docker-stack/)
-- [Aiven App Runtime Documentation](https://docs.aiven.io/docs/products/app-runtime)
+- [Aiven Runtime Documentation](https://aiven.io/docs/products/runtime)
 
 ## License
 
