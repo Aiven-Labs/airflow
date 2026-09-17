@@ -1,22 +1,42 @@
-# Airflow on Aiven App Runtime
+# Airflow on Aiven Runtime
 
-This repository contains a Docker-based deployment configuration for [Apache Airflow](https://airflow.apache.org/) designed to run on Aiven's App Runtime platform.
+This repository contains a Compose file and Docker (Container) file for
+deploying the Standalone version of
+[Apache Airflow](https://airflow.apache.org/) on [Aiven Runtime](https://aiven.io/runtime).
 
 ## Overview
 
-Apache Airflow is a platform to programmatically author, schedule, and monitor workflows. This project provides a containerized setup that:
+Apache Airflow is a platform to programmatically author, schedule, and monitor
+workflows. This project provides a containerized setup that:
 
 - Extends the official Apache Airflow Docker image
 - Runs webserver, scheduler, and triggerer in a single container (`airflow standalone`)
 - Uses LocalExecutor (no Redis/Celery required)
+- Sets up a user and password using the Simple Auth Manager
 - Automatically runs database migrations on startup
-- Configures the application for Aiven App Runtime deployment
+- Configures the application for Aiven Runtime deployment
 
-## Prerequisites
+## Quickstart
 
-- Aiven account with App Runtime access
-- PostgreSQL database service in Aiven (for Airflow's metadata storage)
-- Git repository access (this repo)
+- Make your own copy of this repository
+- Add a Python DAG script to the `dags/` directory.
+  The [Astronaut ETL example DAG](https://github.com/astronomer/astro-example-dags/blob/main/dags/example_astronauts.py) DAG from https://github.com/astronomer/astro-example-dags is straightforwad and engaging, and has no extra external dependencies.
+- Commit the DAG file, and remember to push upstream to your GitHub repository.
+- Follow the documentation to
+  [Deploy to Aiven Runtime](https://aiven.io/docs/products/runtime/deploy-apps).
+  In particular:
+
+   - Select your GitHub account. Connect it to your Aiven organization if 
+     this is the first time deploying from it.
+   - Select your repository and branch.
+   - Select the `compose.aiven.yaml` file and scan it
+   - On the card for the application
+   
+      - Set the `USERNAME` and `PASSWORD`
+      - Choose an appropriate plan - at least 2 vCPU and 4 GB RAM
+
+- When the application is running, click on the **Application URL** to open 
+  the Airflow dashboard and login using the username and password you specified.
 
 ## Resource Requirements
 
@@ -29,92 +49,86 @@ Airflow standalone runs webserver, scheduler, triggerer, DAG processor, and API 
 
 Startup can take **5–7 minutes** with limited resources. If the app is slow to become ready or returns Bad Gateway, increase RAM to at least 4 GB. The [official Docker guide](https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose.html) recommends 4 GB minimum, 8 GB for smoother operation.
 
-## Required Environment Variables
+## Deploying with the Compose file
 
-A database connection **must** be configured. You can use either:
+If you use the Aiven [web console](https://console.aiven.io/) to deploy using the Compose file,
+`compose.aiven.yaml`, then much of the setup is handled automatically.
 
-### Option 1: Aiven Service Integration (Recommended)
+By default, a new PostgreSQL database will be created. You can configure it 
+to set its plan, region and so on.
 
-When you **connect a PostgreSQL service** in Aiven App Runtime's "Connect services" step, Aiven automatically injects `DATABASE_URL`. The entrypoint detects this and configures Airflow accordingly—no extra setup needed.
+Alternatively, if you already have an existing database, you can select it.
 
-### Option 2: Manual Configuration
+## Deploying with the Container file
 
-- `AIRFLOW__DATABASE__SQL_ALCHEMY_CONN` - PostgreSQL connection string for Airflow metadata
+If you deploy using the Container file, `Dockerfile`, then you need to 
+specify the following environment variables:
 
-Example format:
+- `AIRFLOW__DATABASE__SQL_ALCHEMY_CONN` or `DATABASE_URL` - The PostgreSQL 
+  connection string for Airflow metadata. This should have the format
+  ```
+  postgresql+psycopg2://username:password@hostname:port/database
+  ```
 
-```
-postgresql+psycopg2://username:password@hostname:port/database
-```
+  If you're using an Aiven for PostgreSQL service, then this is the 
+  **Service URI** from the service overview page.
 
-Get the connection string from your Aiven PostgreSQL service. Ensure the database user has sufficient permissions to create tables and run migrations.
+  Ensure the database user has sufficient permissions to create tables and run
+  migrations.
 
-### First-Run Configuration (Optional)
+  > **Note:** When you connect a PostgreSQL service in Aiven Runtime's "Connect
+  services" step, Aiven automatically injects `DATABASE_URL`. The entrypoint
+  detects this and configures Airflow accordingly.
 
-**Important:** Aiven rejects environment variable keys that start with `_`. Do **not** use `_AIRFLOW_DB_MIGRATE`, `_AIRFLOW_WWW_USER_CREATE`, or `_AIRFLOW_WWW_USER_PASSWORD`—they will cause validation errors.
+- `USERNAME` and `PASSWORD` - These specify the user to set up.
 
-For the first deployment, you may want to create an admin user. Use these Aiven-compatible names:
+You can also specify the following optional values:
 
-- `AIRFLOW_WWW_USER_CREATE` - Set to `true` to create an admin user
-- `AIRFLOW_WWW_USER_PASSWORD` - Admin password (required when creating user)
+- `AIRFLOW_UID` - The User ID for file permissions (default: 50000)
+- `PORT` - The port the webserver will listen on.
 
-Migrations run automatically on startup (no variable needed). To disable, set `AIRFLOW_DB_MIGRATE=false`.
+> For more on what environment variables are used, look in
+> [entrypoint.sh](./entrypoint.sh).
+> Note that the Aiven console does not let you specify environment 
+> variable keys that start with `_`. The entrypoint script aliases
+> values like `_AIRFLOW_DB_MIGRATE` as `AIRFLOW_DB_MIGRATE`.
 
-**Note:** Airflow 3.x standalone mode auto-creates an `admin` user with a random password on first run. Check the application logs for `Password for user 'admin': <password>`—you may not need to set these variables.
+## User names and passwords
 
-Example for first run:
+The Standalone configuration of Airflow uses the
+[Simple Auth Manager](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/auth-manager/simple/index.html).
+Unlike the
+[FAB](https://airflow.apache.org/docs/apache-airflow-providers-fab/stable/index.html)
+that was provided before Airflow 3, the Simple Auth Manager
+does not support setting username and password from environment
+variables. It also doesn't store user information in the database. Instead it
+reads from a JSON file.
 
-```
-AIRFLOW_WWW_USER_CREATE=true
-AIRFLOW_WWW_USER_PASSWORD=your-secure-password
-```
+> **Note:** The Airflow documentation emphasises that a production
+> deployment of Airflow should be using a more sophisticated auth manager than
+> either FAB _or_ the Simple Auth Manager.
 
-### Other Configuration (Optional)
-
-- `AIRFLOW_UID` - User ID for file permissions (default: 50000)
-- `PORT` - If Aiven injects a `PORT` environment variable, the webserver will automatically listen on it
-
-## Deployment to Aiven App Runtime
-
-1. **Create a PostgreSQL Service** in Aiven (if you don't have one)
-   - This will store Airflow's metadata (DAGs, task history, connections, etc.)
-
-2. **Create an App Runtime Application**
-   - Source: Point to this GitHub repository (`https://github.com/StanDmitrievAiven/airflow.git`)
-   - Branch: `main`
-
-3. **Configure Environment Variables**
-   - Add `AIRFLOW__DATABASE__SQL_ALCHEMY_CONN` with your PostgreSQL connection string from Aiven
-   - For first run, add `AIRFLOW_WWW_USER_CREATE=true` and `AIRFLOW_WWW_USER_PASSWORD=<password>`
-
-4. **Configure Port**
-   - Open port **8080** in your App Runtime configuration (or the port Aiven assigns via `PORT` env var)
-   - Airflow's web UI will be accessible on this port
-
-5. **Deploy**
-   - Aiven will automatically build and deploy your application
-   - Check the logs to verify successful startup and migration
-
-## Accessing the UI
-
-Once deployed, access the Airflow web UI at:
+If you specify both the `USERNAME` and `PASSWORD` environment values, then
+the appropriate file will be created. The runtime logs will reflect this:
 
 ```
-https://<your-app-hostname>:8080/
+Password for the admin user has been previously generated in /opt/airflow/passwords.json. Not echoing it here.
 ```
 
-Or, if Aiven uses a different port via the `PORT` environment variable:
+If you don't specify both `USERNAME` and `PASSWORD`, then an admin user
+with a random password will be generated. This is also recorded in the runtime
+log, but in this case the username and password are actually logged. For
+instance
 
 ```
-https://<your-app-hostname>:<PORT>/
+Simple auth manager | Password for user 'admin': 5vdQkTqhCsY7e3yY
 ```
-
-Default login (if you created a user): `admin` / your configured password.
 
 ## Project Structure
 
 ```
 .
+├── compose.aiven.yaml  # A Compose file for deploying on Aiven Runtime
 ├── Dockerfile          # Extends official Airflow image
 ├── entrypoint.sh       # Startup script: validates env, runs migrations, starts Airflow
 ├── dags/               # Add your DAG files here (embedded in image)
@@ -124,13 +138,15 @@ Default login (if you created a user): `admin` / your configured password.
 
 ## How It Works
 
-1. **Build**: Extends `apache/airflow:3.1.8` with:
-   - LocalExecutor configuration (no Redis needed)
+1. **Build**: Extends `apache/airflow:<version>` (check the `Dockerfile` 
+   for the current `<version>`) with:
    - Custom entrypoint for validation and migrations
    - DAGs from the `dags/` directory
 
 2. **Runtime**: The entrypoint script:
+   - Sets up LocalExecutor configuration (no Redis or Valkey needed)
    - Validates that `AIRFLOW__DATABASE__SQL_ALCHEMY_CONN` is set
+   - Creates the username/password file if necessary
    - Runs database migrations automatically
    - Starts Airflow in standalone mode (webserver + scheduler + triggerer in one process)
 
@@ -138,26 +154,30 @@ Default login (if you created a user): `admin` / your configured password.
 
 Add your DAG files to the `dags/` directory in this repository. They will be copied into the image at build time. After pushing changes, trigger a new deployment in Aiven to pick up the new DAGs.
 
+If you just want to get started, the [Astronaut ETL example DAG](https://github.com/astronomer/astro-example-dags/blob/main/dags/example_astronauts.py) DAG from https://github.com/astronomer/astro-example-dags is straightforwad and engaging, and has no extra external dependencies.
+
 ## Customization
 
 ### Using a Different Airflow Version
 
-To use a different Airflow image version, set the build argument:
+To use a different Airflow image version, set the `AIRFLOW_IMAGE` argument 
+in the `Dockerfile`:
 
 ```dockerfile
-ARG AIRFLOW_IMAGE=apache/airflow:3.0.0
+ARG AIRFLOW_IMAGE=apache/airflow:3.3.2
 ```
 
 ### Adding Providers
 
-To add Airflow providers (e.g. for PostgreSQL, HTTP, etc.), create a `requirements.txt`:
+To add Airflow providers (for PostgreSQL, HTTP, and so on), create a 
+`requirements.txt` file:
 
 ```
 apache-airflow-providers-postgres
 apache-airflow-providers-http
 ```
 
-Then add to the Dockerfile before the CMD:
+Then add to the `Dockerfile` before the `CMD`:
 
 ```dockerfile
 COPY requirements.txt /requirements.txt
@@ -204,8 +224,9 @@ RUN pip install --no-cache-dir -r /requirements.txt
 
 ## Security Considerations
 
-- Use a strong password for `AIRFLOW_WWW_USER_PASSWORD`
-- Consider configuring [Airflow authentication](https://airflow.apache.org/docs/apache-airflow/stable/security/webserver.html) (OAuth, LDAP, etc.) for production
+- Use a strong password for `PASSWORD`
+- For production, strongly consider configuring
+  [Airflow authentication](https://airflow.apache.org/docs/apache-airflow/stable/security/webserver.html) (OAuth, LDAP, etc.)
 - Restrict network access to the application as appropriate
 - Do not commit secrets to the repository; use Aiven's environment variable configuration
 
