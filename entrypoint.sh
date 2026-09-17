@@ -3,14 +3,19 @@ set -e
 
 # Airflow after 3.0.5 no longer includes the FAB auth manager. The Simple
 # Auth Manager that _is_ included does not support setting username and
-# password from environment variables.
-# We are thus going to re-enable the FAB auth manager
-_PIP_ADDITIONAL_REQUIREMENTS="apache-airflow-fab-auth-manager"
-AIRFLOW__CORE__AUTH_MANAGER="airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager"
-
-# Install the apache-airflow-fab-auth-manager "by hand"
-# See https://flask-appbuilder.readthedocs.io/en/latest/installation.html
-pip install flask-appbuilder
+# password from environment variables - it uses a file instead.
+# (The documentation, by the way, emphasises that a production deployment
+# of airflow should be using a more sophisticated auth manager than either
+# FAB _or_ this newer Simple Auth Manager).
+#
+# If no username/password is provided, then an admin user with a random
+# password is generated, and this is logged in the runtime log - for
+# instance
+#     Simple auth manager | Password for user 'admin': 5vdQkTqhCsY7e3yY
+#
+# Let's define where the password file should be
+PASSWORDS_FILE=/opt/airflow/passwords.json"
+export AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE="$PASSWORDS_FILE"
 
 # --- Environment Variable Check ---
 # Support both AIRFLOW__DATABASE__SQL_ALCHEMY_CONN and DATABASE_URL (Aiven service integration)
@@ -51,11 +56,14 @@ fi
 _AIRFLOW_DB_MIGRATE="${_AIRFLOW_DB_MIGRATE:-${AIRFLOW_DB_MIGRATE:-true}}"
 export _AIRFLOW_DB_MIGRATE
 
-# --- Map Aiven-compatible vars to Airflow's _-prefixed vars ---
-# Aiven requires keys to match ^[a-zA-Z][a-zA-Z0-9_]*$ (no leading underscore)
-[ -n "$AIRFLOW_WWW_USER_CREATE" ] && export _AIRFLOW_WWW_USER_CREATE="$AIRFLOW_WWW_USER_CREATE"
-[ -n "$AIRFLOW_WWW_USER_USERNAME" ] && export _AIRFLOW_WWW_USER_USERNAME="$AIRFLOW_WWW_USER_USERNAME"
-[ -n "$AIRFLOW_WWW_USER_PASSWORD" ] && export _AIRFLOW_WWW_USER_PASSWORD="$AIRFLOW_WWW_USER_PASSWORD"
+# If the user has supplied both USERNAME and PASSWORD, then we'll write them
+# to the passwords file
+if [ -n "$AIRFLOW_WWW_USER_USERNAME" -a -n "$AIRFLOW_WWW_USER_PASSWORD" ]; then
+  echo "Setting username $AIRFLOW_WWW_USER_USERNAME with password $AIRFLOW_WWW_USER_PASSWORD"
+  echo "{ \"$AIRFLOW_WWW_USER_USERNAME\": \"$AIRFLOW_WWW_USER_PASSWORD\" }" > $PASSWORDS_FILE
+  echo "Password file $PASSWORDS_FILE contains:"
+  echo "$(cat $PASSWORDS_FILE)"
+fi
 
 # --- Exec into Airflow's entrypoint ---
 # Pass through all arguments (default: standalone)
