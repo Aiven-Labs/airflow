@@ -1,6 +1,13 @@
 #!/bin/sh
 set -e
 
+# Airflow after 3.0.5 no longer includes the FAB auth manager. The Simple
+# Auth Manager that _is_ included does not support setting username and
+# password from environment variables.
+# We are thus going to re-enable the FAB auth manager
+_PIP_ADDITIONAL_REQUIREMENTS="apache-airflow-fab-auth-manager"
+AIRFLOW__CORE__AUTH_MANAGER="airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager"
+
 # --- Environment Variable Check ---
 # Support both AIRFLOW__DATABASE__SQL_ALCHEMY_CONN and DATABASE_URL (Aiven service integration)
 if [ -n "$AIRFLOW__DATABASE__SQL_ALCHEMY_CONN" ]; then
