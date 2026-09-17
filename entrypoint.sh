@@ -8,6 +8,9 @@ set -e
 _PIP_ADDITIONAL_REQUIREMENTS="apache-airflow-fab-auth-manager"
 AIRFLOW__CORE__AUTH_MANAGER="airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager"
 
+# Maybe this will work
+pip install apache-airflow-fab-auth-manager
+
 # --- Environment Variable Check ---
 # Support both AIRFLOW__DATABASE__SQL_ALCHEMY_CONN and DATABASE_URL (Aiven service integration)
 if [ -n "$AIRFLOW__DATABASE__SQL_ALCHEMY_CONN" ]; then
