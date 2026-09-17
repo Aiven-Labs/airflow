@@ -55,6 +55,7 @@ export AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE="$PASSWORDS_FILE"
 if [ -n "$AIRFLOW_USERNAME" -a -n "$AIRFLOW_PASSWORD" ]; then
   echo "Setting up user $AIRFLOW_USERNAME"
   echo "{ \"$AIRFLOW_USERNAME\": \"$AIRFLOW_PASSWORD\" }" > $PASSWORDS_FILE
+  echo "$PASSWORDS_FILE contains $(cat $PASSWORDS_FILE)"
 fi
 
 # --- Exec into Airflow's entrypoint ---
