@@ -1,7 +1,7 @@
 # Apache Airflow on Aiven App Runtime
 # Extends the official Airflow image for stateless deployment with PostgreSQL
 
-ARG AIRFLOW_IMAGE=apache/airflow:3.1.8
+ARG AIRFLOW_IMAGE=apache/airflow:3.3.2
 FROM ${AIRFLOW_IMAGE}
 
 # Copy custom entrypoint (run as root - Airflow image uses non-root user)
