@@ -1,21 +1,10 @@
 #!/bin/sh
 set -e
 
-# Airflow after 3.0.5 no longer includes the FAB auth manager. The Simple
-# Auth Manager that _is_ included does not support setting username and
-# password from environment variables - it uses a file instead.
-# (The documentation, by the way, emphasises that a production deployment
-# of airflow should be using a more sophisticated auth manager than either
-# FAB _or_ this newer Simple Auth Manager).
-#
-# If no username/password is provided, then an admin user with a random
-# password is generated, and this is logged in the runtime log - for
-# instance
-#     Simple auth manager | Password for user 'admin': 5vdQkTqhCsY7e3yY
-#
-# Let's define where the password file should be
-PASSWORDS_FILE="/opt/airflow/passwords.json"
-export AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE="$PASSWORDS_FILE"
+# --- Airflow configuration for stateless App Runtime ---
+export AIRFLOW__CORE__EXECUTOR="LocalExecutor"
+export AIRFLOW__WEBSERVER__EXPOSE_CONFIG="false"
+export AIRFLOW__CORE__LOAD_EXAMPLES="false"
 
 # --- Environment Variable Check ---
 # Support both AIRFLOW__DATABASE__SQL_ALCHEMY_CONN and DATABASE_URL (Aiven service integration)
@@ -56,13 +45,16 @@ fi
 _AIRFLOW_DB_MIGRATE="${_AIRFLOW_DB_MIGRATE:-${AIRFLOW_DB_MIGRATE:-true}}"
 export _AIRFLOW_DB_MIGRATE
 
+# --- Username and Password setup ---
+# Specify where the Simple Auth Manager password file should live
+PASSWORDS_FILE="/opt/airflow/passwords.json"
+export AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE="$PASSWORDS_FILE"
 # If the user has supplied both USERNAME and PASSWORD, then we'll write them
-# to the passwords file
-if [ -n "$AIRFLOW_WWW_USER_USERNAME" -a -n "$AIRFLOW_WWW_USER_PASSWORD" ]; then
-  echo "Setting username $AIRFLOW_WWW_USER_USERNAME with password $AIRFLOW_WWW_USER_PASSWORD"
-  echo "{ \"$AIRFLOW_WWW_USER_USERNAME\": \"$AIRFLOW_WWW_USER_PASSWORD\" }" > $PASSWORDS_FILE
-  echo "Password file $PASSWORDS_FILE contains:"
-  echo "$(cat $PASSWORDS_FILE)"
+# to the passwords file. Otherwise, the Simple Auth Manager will create a
+# default username and password, and write them to the runtime logs
+if [ -n "$AIRFLOW_USERNAME" -a -n "$AIRFLOW_PASSWORD" ]; then
+  echo "Setting up user $AIRFLOW_USERNAME"
+  echo "{ \"$AIRFLOW_USERNAME\": \"$AIRFLOW_PASSWORD\" }" > $PASSWORDS_FILE
 fi
 
 # --- Exec into Airflow's entrypoint ---
